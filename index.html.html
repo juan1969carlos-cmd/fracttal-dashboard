@@ -1,0 +1,901 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fracttal — Facility Intelligence</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700;800;900&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg:        #080e1c;
+    --bg2:       #0d1528;
+    --bg3:       #111c35;
+    --border:    rgba(255,255,255,0.08);
+    --border2:   rgba(255,255,255,0.14);
+    --blue:      #2563eb;
+    --blue-lt:   #3b82f6;
+    --violet:    #7c3aed;
+    --cyan:      #0ea5e9;
+    --green:     #10b981;
+    --amber:     #f59e0b;
+    --red:       #ef4444;
+    --text:      #e2e8f0;
+    --text2:     #94a3b8;
+    --text3:     #64748b;
+  }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+  body::before {
+    content: '';
+    position: fixed; inset: 0; pointer-events: none; z-index: 0;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.018) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.018) 1px, transparent 1px);
+    background-size: 44px 44px;
+  }
+
+  /* ── SCROLLBAR ── */
+  ::-webkit-scrollbar { width: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 3px; }
+
+  /* ── HEADER ── */
+  .header {
+    position: sticky; top: 0; z-index: 100;
+    background: rgba(8,14,28,0.88);
+    backdrop-filter: blur(18px);
+    border-bottom: 1px solid var(--border);
+    padding: 0 28px;
+    height: 60px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .logo-wrap { display: flex; align-items: center; gap: 12px; }
+  .logo-icon {
+    width: 36px; height: 36px; border-radius: 10px;
+    background: linear-gradient(135deg, var(--blue), var(--violet));
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 0 20px rgba(37,99,235,0.4);
+  }
+  .logo-icon svg { width: 18px; height: 18px; }
+  .logo-name { font-size: 15px; font-weight: 900; letter-spacing: 0.04em; color: #fff; }
+  .logo-sub  { font-size: 9px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--text3); margin-top: 1px; }
+
+  /* ── NAV TABS ── */
+  .nav { display: flex; gap: 4px; background: rgba(255,255,255,0.05); border: 1px solid var(--border); border-radius: 12px; padding: 4px; }
+  .nav-btn {
+    padding: 7px 18px; border-radius: 8px; border: none; background: transparent;
+    color: var(--text2); font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 600;
+    cursor: pointer; transition: all .2s; white-space: nowrap;
+  }
+  .nav-btn:hover { color: #fff; background: rgba(255,255,255,0.06); }
+  .nav-btn.active {
+    background: linear-gradient(135deg, var(--blue), var(--violet));
+    color: #fff; box-shadow: 0 4px 14px rgba(37,99,235,0.35);
+  }
+
+  /* ── HEADER RIGHT ── */
+  .header-right { display: flex; align-items: center; gap: 14px; }
+  .alert-badge {
+    display: flex; align-items: center; gap: 6px;
+    background: rgba(239,68,68,0.12); border: 1px solid rgba(239,68,68,0.3);
+    border-radius: 8px; padding: 5px 12px;
+  }
+  .alert-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--red); animation: pulse 2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.6;transform:scale(.85)} }
+  .alert-badge span { font-size: 11px; font-weight: 700; color: #fca5a5; letter-spacing:.02em; }
+  .clock { text-align: right; }
+  .clock-time { font-family: 'DM Mono', monospace; font-size: 13px; color: var(--text2); }
+  .clock-date { font-size: 10px; color: var(--text3); }
+  .avatar { width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg, var(--blue-lt), var(--violet)); display:flex;align-items:center;justify-content:center; font-size:11px;font-weight:800;color:#fff; }
+
+  /* ── LAYOUT ── */
+  .main { max-width: 1360px; margin: 0 auto; padding: 24px 28px; position: relative; z-index: 1; }
+  .tab-content { display: none; animation: fadeIn .3s ease; }
+  .tab-content.active { display: block; }
+  @keyframes fadeIn { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:translateY(0)} }
+
+  /* ── CARDS ── */
+  .card {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    backdrop-filter: blur(8px);
+    padding: 20px;
+    transition: all .25s;
+  }
+  .card:hover { background: rgba(255,255,255,0.065); border-color: var(--border2); }
+
+  /* ── GRID ── */
+  .grid-4 { display: grid; grid-template-columns: repeat(4,1fr); gap: 14px; }
+  .grid-3 { display: grid; grid-template-columns: repeat(3,1fr); gap: 16px; }
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .grid-5-3 { display: grid; grid-template-columns: 5fr 3fr; gap: 16px; }
+  .grid-2-3 { display: grid; grid-template-columns: 2fr 3fr; gap: 16px; }
+  .gap-16 { gap: 16px; }
+  .mt-16 { margin-top: 16px; }
+  .mt-12 { margin-top: 12px; }
+  .mb-16 { margin-bottom: 16px; }
+
+  /* ── STAT CARD ── */
+  .stat-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .12em; color: var(--text3); margin-bottom: 8px; }
+  .stat-value { font-size: 32px; font-weight: 900; line-height: 1; }
+  .stat-sub { font-size: 11px; color: var(--text3); margin-top: 6px; }
+
+  /* ── SECTION HEADER ── */
+  .section-hdr { display: flex; align-items: baseline; gap: 10px; margin-bottom: 16px; }
+  .section-title { font-size: 14px; font-weight: 800; color: #fff; }
+  .section-sub { font-size: 11px; color: var(--text3); }
+
+  /* ── HEALTH BAR ── */
+  .health-bar-wrap { width: 100%; height: 6px; background: rgba(255,255,255,0.08); border-radius: 3px; overflow: hidden; }
+  .health-bar-fill { height: 100%; border-radius: 3px; transition: width .7s ease; }
+
+  /* ── RISK BADGE ── */
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 5px; font-size: 9px; font-weight: 800; letter-spacing: .08em; border: 1px solid; white-space: nowrap; }
+  .badge-critical { background: rgba(239,68,68,.15); color: #fca5a5; border-color: rgba(239,68,68,.35); }
+  .badge-medium   { background: rgba(245,158,11,.15); color: #fcd34d; border-color: rgba(245,158,11,.35); }
+  .badge-low      { background: rgba(16,185,129,.15); color: #6ee7b7; border-color: rgba(16,185,129,.35); }
+
+  /* ── ASSET CARDS GRID ── */
+  .assets-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 10px; }
+  .asset-mini {
+    background: rgba(255,255,255,0.04); border: 1px solid var(--border);
+    border-radius: 12px; padding: 12px; cursor: pointer; transition: all .2s;
+  }
+  .asset-mini:hover { background: rgba(255,255,255,0.08); transform: translateY(-1px); }
+  .asset-mini.selected { background: rgba(37,99,235,.12); border-color: rgba(37,99,235,.4); box-shadow: 0 0 20px rgba(37,99,235,.12); }
+  .asset-name { font-size: 11px; font-weight: 700; color: #fff; margin-bottom: 2px; line-height: 1.3; }
+  .asset-id   { font-size: 9px; color: var(--text3); margin-bottom: 8px; }
+  .asset-health-num { font-size: 11px; font-weight: 800; }
+
+  /* ── GAUGE ── */
+  .gauge-wrap { position: relative; width: 100px; height: 100px; margin: 0 auto; }
+  .gauge-wrap svg { transform: rotate(-90deg); }
+  .gauge-center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+  .gauge-pct { font-size: 22px; font-weight: 900; color: #fff; line-height: 1; }
+  .gauge-lbl { font-size: 9px; color: var(--text3); line-height: 1.2; text-align: center; margin-top: 2px; }
+
+  /* ── SENSOR METRICS ── */
+  .sensor-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 8px; margin-top: 12px; }
+  .sensor-card { background: rgba(0,0,0,.3); border-radius: 10px; padding: 10px; text-align: center; }
+  .sensor-name { font-size: 9px; color: var(--text3); text-transform: uppercase; letter-spacing: .08em; }
+  .sensor-val  { font-size: 20px; font-weight: 900; margin: 4px 0 0; line-height: 1; }
+  .sensor-unit { font-size: 9px; color: var(--text3); }
+  .sensor-status { font-size: 9px; font-weight: 700; margin-top: 4px; }
+
+  /* ── ALERT BOX ── */
+  .alert-box {
+    background: rgba(239,68,68,.08); border: 1px solid rgba(239,68,68,.25);
+    border-radius: 14px; padding: 14px 18px;
+    display: flex; align-items: center; gap: 14px; margin-bottom: 16px;
+    box-shadow: 0 0 30px rgba(239,68,68,.1);
+    animation: fadeIn .4s ease;
+  }
+  .alert-icon { font-size: 22px; flex-shrink: 0; }
+  .alert-title { font-size: 12px; font-weight: 800; color: #fca5a5; }
+  .alert-desc  { font-size: 11px; color: rgba(252,165,165,.65); margin-top: 2px; }
+  .close-btn { margin-left: auto; background: none; border: none; color: rgba(252,165,165,.4); font-size: 18px; cursor: pointer; padding: 0 4px; transition: color .2s; }
+  .close-btn:hover { color: #fca5a5; }
+
+  /* ── RUL PANEL ── */
+  .rul-panel { background: rgba(0,0,0,.25); border-radius: 12px; padding: 14px; }
+  .rul-val { font-size: 38px; font-weight: 900; color: #fff; line-height: 1; }
+  .rul-unit { font-size: 14px; color: var(--text3); }
+  .rul-row { display: flex; justify-content: space-between; align-items: center; margin-top: 8px; }
+  .rul-key { font-size: 10px; color: var(--text3); }
+  .rul-v   { font-size: 11px; font-weight: 700; }
+
+  /* ── RECOMMEND BOX ── */
+  .rec-box { border-radius: 14px; padding: 14px 16px; display: flex; gap: 12px; margin-top: 12px; }
+  .rec-icon-wrap { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
+  .rec-title { font-size: 12px; font-weight: 800; }
+  .rec-desc  { font-size: 11px; color: var(--text3); margin-top: 4px; line-height: 1.5; }
+
+  /* ── CHART CONTAINERS ── */
+  .chart-box { position: relative; }
+
+  /* ── TABLE ── */
+  .data-table { width: 100%; border-collapse: collapse; font-size: 11px; }
+  .data-table th { padding: 10px 12px; text-align: left; font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--text3); border-bottom: 1px solid var(--border); }
+  .data-table td { padding: 10px 12px; border-bottom: 1px solid rgba(255,255,255,0.04); vertical-align: middle; }
+  .data-table tr:last-child td { border-bottom: none; }
+  .data-table tr:hover td { background: rgba(255,255,255,.025); }
+  .data-table .td-name { font-weight: 700; color: #fff; font-size: 12px; }
+  .data-table .td-sub  { font-size: 9px; color: var(--text3); margin-top: 1px; }
+
+  /* ── WORK ORDER ROWS ── */
+  .wo-row { display: flex; align-items: center; gap: 16px; padding: 12px 16px; border-bottom: 1px solid rgba(255,255,255,.04); transition: background .2s; }
+  .wo-row:hover { background: rgba(255,255,255,.025); }
+  .wo-row:last-child { border-bottom: none; }
+  .wo-id { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--blue-lt); font-weight: 500; min-width: 60px; }
+  .wo-asset { flex: 1; }
+  .wo-name  { font-size: 12px; font-weight: 700; color: #fff; }
+  .wo-loc   { font-size: 10px; color: var(--text3); }
+  .wo-tech  { font-size: 11px; color: var(--text2); min-width: 80px; }
+  .wo-eta   { font-size: 10px; color: var(--text3); min-width: 70px; text-align: right; }
+
+  /* ── PRIORITY BADGES ── */
+  .p-critical { background:rgba(239,68,68,.15);color:#fca5a5;border:1px solid rgba(239,68,68,.3); }
+  .p-high     { background:rgba(245,158,11,.15);color:#fcd34d;border:1px solid rgba(245,158,11,.3); }
+  .p-medium   { background:rgba(59,130,246,.15);color:#93c5fd;border:1px solid rgba(59,130,246,.3); }
+  .p-low      { background:rgba(16,185,129,.15);color:#6ee7b7;border:1px solid rgba(16,185,129,.3); }
+
+  /* ── STATUS DOTS ── */
+  .status-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 5px; }
+  .s-progress { background: var(--amber); animation: pulse 1.5s infinite; }
+  .s-pending  { background: var(--red); }
+  .s-sched    { background: var(--text3); }
+
+  /* ── ML INSIGHT BOX ── */
+  .insight-box { background: linear-gradient(135deg, rgba(37,99,235,.08), rgba(124,58,237,.08)); border: 1px solid rgba(37,99,235,.2); border-radius: 14px; padding: 16px 20px; margin-top: 16px; }
+  .insight-title { font-size: 13px; font-weight: 800; color: var(--blue-lt); margin-bottom: 6px; }
+  .insight-text  { font-size: 12px; color: var(--text2); line-height: 1.65; }
+
+  /* ── COST LEGEND ── */
+  .legend-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+  .legend-dot { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
+  .legend-name { font-size: 11px; color: var(--text2); flex: 1; margin-left: 8px; }
+  .legend-val  { font-size: 11px; font-weight: 800; color: #fff; }
+
+  /* ── LIVE BADGE ── */
+  .live-badge { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 700; color: var(--green); }
+  .live-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); animation: pulse 1.5s infinite; }
+
+  /* ── TREND ── */
+  .trend-up   { color: var(--green); }
+  .trend-down { color: var(--red); }
+  .trend-flat { color: var(--amber); }
+
+  /* ── RESPONSIVE ── */
+  @media (max-width: 900px) {
+    .grid-4, .assets-grid { grid-template-columns: repeat(2,1fr); }
+    .grid-5-3, .grid-2-3, .grid-2 { grid-template-columns: 1fr; }
+    .nav-btn { padding: 6px 10px; font-size: 11px; }
+    .sensor-grid { grid-template-columns: repeat(2,1fr); }
+  }
+</style>
+</head>
+<body>
+
+<!-- ══ HEADER ══ -->
+<header class="header">
+  <div class="logo-wrap">
+    <div class="logo-icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+    </div>
+    <div>
+      <div class="logo-name">FRACTTAL</div>
+      <div class="logo-sub">Facility Intelligence</div>
+    </div>
+  </div>
+
+  <nav class="nav">
+    <button class="nav-btn active" onclick="showTab('dashboard',this)">Dashboard</button>
+    <button class="nav-btn"        onclick="showTab('assets',this)">Activos & ML</button>
+    <button class="nav-btn"        onclick="showTab('analytics',this)">Analytics</button>
+    <button class="nav-btn"        onclick="showTab('workorders',this)">Órdenes</button>
+  </nav>
+
+  <div class="header-right">
+    <div class="alert-badge">
+      <div class="alert-dot"></div>
+      <span>2 Alertas Críticas</span>
+    </div>
+    <div class="clock">
+      <div class="clock-time" id="clock">--:--:--</div>
+      <div class="clock-date">17 Feb 2025</div>
+    </div>
+    <div class="avatar">JD</div>
+  </div>
+</header>
+
+<!-- ══ MAIN ══ -->
+<div class="main">
+
+  <!-- ════ TAB: DASHBOARD ════ -->
+  <div class="tab-content active" id="tab-dashboard">
+
+    <div class="alert-box" id="alertBox">
+      <div class="alert-icon">⚡</div>
+      <div>
+        <div class="alert-title">Alerta Predictiva Crítica — Acción Inmediata Requerida</div>
+        <div class="alert-desc">GENE-01 (Generador de Emergencia) · Probabilidad de fallo: 91% · RUL estimado: 8 horas · Temperatura anómala detectada por modelo ML</div>
+      </div>
+      <button class="close-btn" onclick="document.getElementById('alertBox').style.display='none'">✕</button>
+    </div>
+
+    <!-- KPI CARDS -->
+    <div class="grid-4 mb-16">
+      <div class="card">
+        <div class="stat-label">Salud Promedio</div>
+        <div class="stat-value" style="color:#10b981">68<small style="font-size:18px;color:var(--text3)">%</small></div>
+        <div class="stat-sub">↑ +4% vs mes anterior</div>
+      </div>
+      <div class="card">
+        <div class="stat-label">Alertas Críticas</div>
+        <div class="stat-value" style="color:#ef4444">2</div>
+        <div class="stat-sub">Requieren atención hoy</div>
+      </div>
+      <div class="card">
+        <div class="stat-label">Ahorro Estimado ML</div>
+        <div class="stat-value" style="color:#3b82f6">$78k</div>
+        <div class="stat-sub">vs mantenimiento reactivo</div>
+      </div>
+      <div class="card">
+        <div class="stat-label">Órdenes Activas</div>
+        <div class="stat-value" style="color:#f59e0b">3</div>
+        <div class="stat-sub">5 total este mes</div>
+      </div>
+    </div>
+
+    <!-- CHARTS ROW -->
+    <div class="grid-5-3 mb-16">
+      <div class="card">
+        <div class="section-hdr">
+          <span class="section-title">Evolución de Indicadores</span>
+          <span class="section-sub">OEE y órdenes de trabajo — últimos 6 meses</span>
+          <span style="margin-left:auto;font-size:10px;font-weight:700;color:var(--green);background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.2);padding:3px 8px;border-radius:6px;">↑ Tendencia positiva</span>
+        </div>
+        <div class="chart-box" style="height:220px">
+          <canvas id="trendChart"></canvas>
+        </div>
+      </div>
+      <div class="card">
+        <div class="section-hdr">
+          <span class="section-title">Costos por Tipo</span>
+        </div>
+        <div class="chart-box" style="height:160px">
+          <canvas id="costChart"></canvas>
+        </div>
+        <div style="margin-top:14px">
+          <div class="legend-row"><div class="legend-dot" style="background:#ef4444"></div><span class="legend-name">Correctivo</span><span class="legend-val">38%</span></div>
+          <div class="legend-row"><div class="legend-dot" style="background:#f59e0b"></div><span class="legend-name">Preventivo</span><span class="legend-val">31%</span></div>
+          <div class="legend-row"><div class="legend-dot" style="background:#3b82f6"></div><span class="legend-name">Predictivo</span><span class="legend-val">18%</span></div>
+          <div class="legend-row"><div class="legend-dot" style="background:#8b5cf6"></div><span class="legend-name">Overhaul</span><span class="legend-val">13%</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ASSETS GRID -->
+    <div class="card">
+      <div class="section-hdr">
+        <span class="section-title">Mapa de Salud de Activos</span>
+        <span class="section-sub">Haz clic en un activo para análisis ML detallado</span>
+        <button onclick="showTab('assets',document.querySelectorAll('.nav-btn')[1])" style="margin-left:auto;background:none;border:none;color:var(--blue-lt);font-size:11px;font-weight:700;cursor:pointer;">Ver análisis ML →</button>
+      </div>
+      <div class="assets-grid" id="dashAssets"></div>
+    </div>
+  </div>
+
+  <!-- ════ TAB: ACTIVOS & ML ════ -->
+  <div class="tab-content" id="tab-assets">
+    <div style="display:grid;grid-template-columns:220px 1fr;gap:16px;align-items:start">
+
+      <!-- ASSET LIST -->
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <div style="font-size:15px;font-weight:900;color:#fff;margin-bottom:10px">Activos <span style="font-size:12px;font-weight:400;color:var(--text3)">Motor ML</span></div>
+        <div id="assetList"></div>
+      </div>
+
+      <!-- DETAIL PANEL -->
+      <div id="assetDetail"></div>
+    </div>
+  </div>
+
+  <!-- ════ TAB: ANALYTICS ════ -->
+  <div class="tab-content" id="tab-analytics">
+    <div style="font-size:15px;font-weight:900;color:#fff;margin-bottom:16px">Analytics <span style="font-size:12px;font-weight:400;color:var(--text3)">— Insights de Mantenimiento</span></div>
+
+    <div class="grid-3 mb-16">
+      <div class="card"><div class="stat-label">MTBF Promedio Global</div><div class="stat-value" style="color:#3b82f6">1,248<small style="font-size:14px;color:var(--text3)"> h</small></div><div class="stat-sub">↑ +87h vs mes anterior</div></div>
+      <div class="card"><div class="stat-label">OEE Instalaciones</div><div class="stat-value" style="color:#8b5cf6">78.3<small style="font-size:14px;color:var(--text3)">%</small></div><div class="stat-sub">Meta: 85% · Gap: 6.7%</div></div>
+      <div class="card"><div class="stat-label">Costo Total Mes</div><div class="stat-value" style="color:#10b981">$31k</div><div class="stat-sub">↓ -18% vs promedio anual</div></div>
+    </div>
+
+    <div class="grid-2 mb-16">
+      <div class="card">
+        <div class="section-hdr">
+          <span class="section-title">Costos de Mantenimiento</span>
+          <span class="section-sub">Ahorro acumulado: <strong style="color:#10b981">$78,400</strong></span>
+        </div>
+        <div class="chart-box" style="height:220px"><canvas id="costBarChart"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="section-hdr"><span class="section-title">MTBF por Activo</span></div>
+        <div id="mtbfBars" style="margin-top:8px"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="section-hdr"><span class="section-title">Matriz de Criticidad — Riesgo vs Impacto</span></div>
+      <table class="data-table" id="riskMatrix"></table>
+    </div>
+  </div>
+
+  <!-- ════ TAB: WORK ORDERS ════ -->
+  <div class="tab-content" id="tab-workorders">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+      <div style="font-size:15px;font-weight:900;color:#fff">Órdenes de Trabajo <span style="font-size:12px;font-weight:400;color:var(--text3)">— Generadas por ML</span></div>
+      <button style="background:var(--blue);border:none;color:#fff;font-size:12px;font-weight:700;padding:8px 18px;border-radius:10px;cursor:pointer;font-family:'DM Sans',sans-serif;transition:background .2s" onmouseover="this.style.background='#3b82f6'" onmouseout="this.style.background='var(--blue)'">+ Nueva OT</button>
+    </div>
+
+    <div class="grid-4 mb-16">
+      <div class="card"><div class="stat-label">Total Órdenes</div><div class="stat-value" style="color:#3b82f6">5</div></div>
+      <div class="card"><div class="stat-label">En Progreso</div><div class="stat-value" style="color:#f59e0b">1</div></div>
+      <div class="card"><div class="stat-label">Pendientes</div><div class="stat-value" style="color:#ef4444">2</div></div>
+      <div class="card"><div class="stat-label">Programadas</div><div class="stat-value" style="color:#10b981">2</div></div>
+    </div>
+
+    <div class="card">
+      <div class="section-hdr"><span class="section-title">Órdenes Activas — Prioridad Predictiva</span></div>
+      <div id="workOrderList"></div>
+    </div>
+
+    <div class="insight-box">
+      <div class="insight-title">💡 Insight del Motor ML</div>
+      <div class="insight-text">El modelo predictivo identificó <strong style="color:#fff">2 fallos críticos inminentes</strong> con un lead time promedio de <strong style="color:#fff">72 horas</strong>, permitiendo intervenciones planificadas en lugar de correctivas. El ahorro estimado es de <strong style="color:#10b981">$43,000</strong> en costos de reparación de emergencia. La tasa de asertividad del modelo en los últimos 90 días es del <strong style="color:#3b82f6">89.3%</strong>.</div>
+    </div>
+  </div>
+
+</div><!-- /main -->
+
+<script>
+// ══════════════════════════════════════════════
+// DATA
+// ══════════════════════════════════════════════
+const ASSETS = [
+  { id:"HVAC-01", name:"Chiller Central A",          loc:"Torre Norte - B1",         type:"HVAC",       health:42, risk:"critical", mtbf:720,  mttr:4.2,  failP:0.87, trend:"down", cost:18400, nextP:"20 Feb 2025", lastM:"02 Nov 2024" },
+  { id:"HVAC-02", name:"AHU Piso 12",                loc:"Torre Norte - P12",        type:"HVAC",       health:71, risk:"medium",   mtbf:1080, mttr:2.1,  failP:0.34, trend:"stable",cost:7200, nextP:"10 Abr 2025", lastM:"15 Dic 2024" },
+  { id:"ELEC-01", name:"Tablero Eléctrico Principal",loc:"Subestación - B2",         type:"Eléctrico",  health:88, risk:"low",      mtbf:2160, mttr:6.8,  failP:0.12, trend:"up",   cost:3100,  nextP:"15 Jun 2025", lastM:"08 Ene 2025" },
+  { id:"ELEC-02", name:"UPS Datacenter",             loc:"Sala Servidores - P3",     type:"Eléctrico",  health:63, risk:"medium",   mtbf:900,  mttr:3.5,  failP:0.51, trend:"down", cost:11500, nextP:"05 Mar 2025", lastM:"22 Oct 2024" },
+  { id:"BOMB-01", name:"Bomba Hidroneumática",       loc:"Sala de Máquinas - B1",    type:"Hidráulico", health:55, risk:"medium",   mtbf:840,  mttr:2.8,  failP:0.62, trend:"down", cost:9800,  nextP:"18 Mar 2025", lastM:"01 Dic 2024" },
+  { id:"ELEV-01", name:"Elevador Torre Sur #2",      loc:"Torre Sur - todos pisos",  type:"Elevación",  health:91, risk:"low",      mtbf:2880, mttr:8.1,  failP:0.08, trend:"stable",cost:2200, nextP:"20 Jul 2025", lastM:"20 Ene 2025" },
+  { id:"GENE-01", name:"Generador de Emergencia",    loc:"Azotea - Torre Norte",     type:"Generación", health:35, risk:"critical", mtbf:600,  mttr:12.3, failP:0.91, trend:"down", cost:24600, nextP:"12 Feb 2025", lastM:"15 Sep 2024" },
+  { id:"FIRE-01", name:"Sistema Contra Incendios",   loc:"Todo el edificio",         type:"Seguridad",  health:96, risk:"low",      mtbf:4320, mttr:1.2,  failP:0.04, trend:"up",   cost:800,   nextP:"25 Jul 2025", lastM:"25 Ene 2025" },
+];
+
+const SENSOR_DATA = {
+  "HVAC-01": { labels:["08h","09h","10h","11h","12h","13h","14h","15h"], temp:[72,74,78,81,85,88,91,89], vib:[3.8,4.1,5.2,6.1,7.4,8.2,9.1,8.8], pres:[48,47,45,43,41,39,37,38], curr:[42,44,47,51,55,58,62,60] },
+  "GENE-01": { labels:["08h","09h","10h","11h","12h","13h","14h","15h"], temp:[68,71,75,79,83,87,90,93], vib:[2.1,3.2,4.8,6.3,7.9,9.4,10.8,12.1], pres:[52,50,48,45,42,40,38,35], curr:[38,41,45,49,53,57,61,65] },
+  default:    { labels:["08h","09h","10h","11h","12h","13h","14h","15h"], temp:[58,59,60,61,61,62,61,60], vib:[1.2,1.3,1.4,1.5,1.4,1.5,1.3,1.2], pres:[55,55,54,54,55,54,55,56], curr:[32,33,33,34,34,35,34,33] },
+};
+
+const WORK_ORDERS = [
+  { id:"WO-2847", assetId:"HVAC-01", priority:"critical", type:"Predictivo",  status:"pending",    tech:"Carlos M.",  eta:"Hoy 16:00" },
+  { id:"WO-2848", assetId:"GENE-01", priority:"critical", type:"Predictivo",  status:"inprogress", tech:"Ana R.",     eta:"Hoy 14:00" },
+  { id:"WO-2849", assetId:"ELEC-02", priority:"high",     type:"Preventivo",  status:"pending",    tech:"Luis T.",    eta:"Mañana" },
+  { id:"WO-2850", assetId:"BOMB-01", priority:"medium",   type:"Predictivo",  status:"scheduled",  tech:"Mario V.",   eta:"18 Feb" },
+  { id:"WO-2851", assetId:"HVAC-02", priority:"low",      type:"Preventivo",  status:"scheduled",  tech:"Sofía L.",   eta:"22 Feb" },
+];
+
+const KPI_TREND = {
+  labels: ["Sep","Oct","Nov","Dic","Ene","Feb"],
+  oee:    [71,74,69,72,76,78],
+  orders: [32,28,37,25,21,19],
+  costs:  [48,42,55,39,34,31],
+};
+
+// ══════════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════════
+let selectedAsset = ASSETS[0];
+let charts = {};
+
+// ══════════════════════════════════════════════
+// UTILS
+// ══════════════════════════════════════════════
+function healthColor(h) { return h>=80?"#10b981":h>=55?"#f59e0b":"#ef4444"; }
+function riskLabel(r)   { return {critical:"CRÍTICO",medium:"MEDIO",low:"BAJO"}[r]; }
+function trendSymbol(t) { return {up:"↑",down:"↓",stable:"→"}[t]; }
+function trendClass(t)  { return {up:"trend-up",down:"trend-down",stable:"trend-flat"}[t]; }
+function rul(a) {
+  const base = (a.health/100)*a.mtbf;
+  const factor = a.trend==="down"?.7:a.trend==="up"?1.2:1;
+  return Math.max(1, Math.round(base*factor));
+}
+function anomalyScore(a) { return ((1-a.health/100)*10).toFixed(1); }
+function availability(a) { return (a.mtbf/(a.mtbf+a.mttr)*100).toFixed(1); }
+function riskScore(a)    { return (a.failP*a.cost/1000).toFixed(0); }
+
+// ══════════════════════════════════════════════
+// CLOCK
+// ══════════════════════════════════════════════
+function updateClock() {
+  const now = new Date();
+  document.getElementById("clock").textContent = now.toLocaleTimeString("es-ES");
+}
+setInterval(updateClock, 1000);
+updateClock();
+
+// ══════════════════════════════════════════════
+// TAB NAVIGATION
+// ══════════════════════════════════════════════
+function showTab(id, btn) {
+  document.querySelectorAll(".tab-content").forEach(t=>t.classList.remove("active"));
+  document.querySelectorAll(".nav-btn").forEach(b=>b.classList.remove("active"));
+  document.getElementById("tab-"+id).classList.add("active");
+  if(btn) btn.classList.add("active");
+  if(id==="analytics") renderAnalyticsCharts();
+}
+
+// ══════════════════════════════════════════════
+// CHART HELPERS
+// ══════════════════════════════════════════════
+const chartDefaults = {
+  responsive: true, maintainAspectRatio: false,
+  plugins: { legend: { display: false }, tooltip: {
+    backgroundColor: "#0f172a", borderColor: "rgba(255,255,255,.1)", borderWidth: 1,
+    titleColor: "#e2e8f0", bodyColor: "#94a3b8", padding: 10, cornerRadius: 8,
+  }},
+  scales: {
+    x: { grid: { color: "rgba(255,255,255,.04)" }, ticks: { color: "#64748b", font: { size: 10 } } },
+    y: { grid: { color: "rgba(255,255,255,.04)" }, ticks: { color: "#64748b", font: { size: 10 } } },
+  },
+};
+
+function destroyChart(id) { if(charts[id]){ charts[id].destroy(); delete charts[id]; } }
+
+function createAreaChart(id, labels, datasets) {
+  destroyChart(id);
+  const ctx = document.getElementById(id).getContext("2d");
+  charts[id] = new Chart(ctx, {
+    type: "line",
+    data: { labels, datasets },
+    options: { ...chartDefaults, elements: { point: { radius: 3 } } },
+  });
+}
+
+function createLineChart(id, labels, datasets) {
+  destroyChart(id);
+  const ctx = document.getElementById(id).getContext("2d");
+  charts[id] = new Chart(ctx, {
+    type: "line",
+    data: { labels, datasets },
+    options: {
+      ...chartDefaults, responsive:true, maintainAspectRatio:false,
+      elements: { point: { radius: 2 } },
+      plugins: { ...chartDefaults.plugins, legend: { display: true, labels: { color: "#94a3b8", font: { size: 10 }, boxWidth: 10 } } },
+    },
+  });
+}
+
+// ══════════════════════════════════════════════
+// DASHBOARD TAB
+// ══════════════════════════════════════════════
+function renderDashboard() {
+  // Trend chart
+  const grad1 = document.getElementById("trendChart").getContext("2d").createLinearGradient(0,0,0,200);
+  grad1.addColorStop(0,"rgba(59,130,246,.3)"); grad1.addColorStop(1,"rgba(59,130,246,0)");
+  const grad2 = document.getElementById("trendChart").getContext("2d").createLinearGradient(0,0,0,200);
+  grad2.addColorStop(0,"rgba(139,92,246,.3)"); grad2.addColorStop(1,"rgba(139,92,246,0)");
+
+  createAreaChart("trendChart", KPI_TREND.labels, [
+    { label:"OEE %",     data:KPI_TREND.oee,    borderColor:"#3b82f6", backgroundColor:grad1, borderWidth:2.5, fill:true, tension:.4 },
+    { label:"Órdenes",   data:KPI_TREND.orders,  borderColor:"#8b5cf6", backgroundColor:grad2, borderWidth:2.5, fill:true, tension:.4 },
+  ]);
+
+  // Cost donut
+  destroyChart("costChart");
+  const cCtx = document.getElementById("costChart").getContext("2d");
+  charts["costChart"] = new Chart(cCtx, {
+    type: "doughnut",
+    data: { labels:["Correctivo","Preventivo","Predictivo","Overhaul"], datasets:[{ data:[38,31,18,13], backgroundColor:["#ef4444","#f59e0b","#3b82f6","#8b5cf6"], borderWidth:0, hoverOffset:4 }] },
+    options: { responsive:true, maintainAspectRatio:false, plugins: { legend:{ display:false }, tooltip: chartDefaults.plugins.tooltip }, cutout:"62%" },
+  });
+
+  // Assets mini cards
+  const grid = document.getElementById("dashAssets");
+  grid.innerHTML = ASSETS.map(a => `
+    <div class="asset-mini" onclick="goToAsset('${a.id}')">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">
+        <div class="asset-name">${a.name}</div>
+        <span class="badge badge-${a.risk}" style="margin-left:4px">${riskLabel(a.risk)}</span>
+      </div>
+      <div class="asset-id">${a.id} · ${a.type}</div>
+      <div class="health-bar-wrap"><div class="health-bar-fill" style="width:${a.health}%;background:${healthColor(a.health)}"></div></div>
+      <div style="display:flex;justify-content:space-between;margin-top:4px">
+        <span style="font-size:9px;color:var(--text3)">Salud</span>
+        <span class="asset-health-num" style="font-size:11px;color:${healthColor(a.health)}">${a.health}%</span>
+      </div>
+    </div>
+  `).join("");
+}
+
+function goToAsset(id) {
+  selectedAsset = ASSETS.find(a=>a.id===id);
+  showTab("assets", document.querySelectorAll(".nav-btn")[1]);
+  renderAssets();
+}
+
+// ══════════════════════════════════════════════
+// ASSETS & ML TAB
+// ══════════════════════════════════════════════
+function renderAssets() {
+  // List
+  document.getElementById("assetList").innerHTML = ASSETS.map(a => `
+    <div class="asset-mini${a.id===selectedAsset.id?" selected":""}" onclick="selectAsset('${a.id}')" style="margin-bottom:4px">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px">
+        <div class="asset-name">${a.name}</div>
+        <span class="badge badge-${a.risk}">${riskLabel(a.risk)}</span>
+      </div>
+      <div class="asset-id">${a.id} · ${a.loc}</div>
+      <div class="health-bar-wrap"><div class="health-bar-fill" style="width:${a.health}%;background:${healthColor(a.health)}"></div></div>
+      <div style="display:flex;justify-content:space-between;margin-top:4px">
+        <span style="font-size:9px;color:var(--text3)">Salud</span>
+        <span style="font-size:11px;font-weight:800;color:${healthColor(a.health)}">${a.health}%</span>
+      </div>
+      <div style="display:flex;gap:10px;margin-top:6px">
+        <span style="font-size:9px;color:var(--text3)">MTBF: <b style="color:var(--text2)">${a.mtbf}h</b></span>
+        <span style="font-size:9px;color:var(--text3)">MTTR: <b style="color:var(--text2)">${a.mttr}h</b></span>
+        <span style="font-size:9px;color:var(--text3)" class="${trendClass(a.trend)}">${trendSymbol(a.trend)}</span>
+      </div>
+    </div>
+  `).join("");
+
+  renderAssetDetail();
+}
+
+function selectAsset(id) {
+  selectedAsset = ASSETS.find(a=>a.id===id);
+  renderAssets();
+}
+
+function renderAssetDetail() {
+  const a = selectedAsset;
+  const ru = rul(a);
+  const as = anomalyScore(a);
+  const av = availability(a);
+  const pct = Math.round(a.failP*100);
+  const hc = healthColor(a.health);
+
+  // Gauge SVG
+  const C2 = 2*Math.PI*38;
+  const offset = C2-(pct/100)*C2;
+  const gc = pct>=75?"#ef4444":pct>=45?"#f59e0b":"#10b981";
+
+  // Recommendation
+  const recCfg = {
+    critical: { bg:"rgba(239,68,68,.08)", bdr:"rgba(239,68,68,.25)", ic:"rgba(239,68,68,.2)", tc:"#fca5a5", em:"🚨",
+      txt:`El modelo ML detecta degradación acelerada. Anomaly Score ${as}/10. Se recomienda intervención correctiva INMEDIATA antes del ${a.nextP}. Probabilidad de fallo catastrófico: ${pct}%. Costo estimado de no intervenir: $${a.cost.toLocaleString()}.` },
+    medium:   { bg:"rgba(245,158,11,.08)", bdr:"rgba(245,158,11,.25)", ic:"rgba(245,158,11,.2)", tc:"#fcd34d", em:"⚠️",
+      txt:`Tendencia de degradación detectada. Programar mantenimiento preventivo en los próximos 15 días. El modelo predice cruce del umbral crítico alrededor del ${a.nextP}. Optimizar lubricación y limpieza de filtros.` },
+    low:      { bg:"rgba(16,185,129,.08)", bdr:"rgba(16,185,129,.25)", ic:"rgba(16,185,129,.2)", tc:"#6ee7b7", em:"✅",
+      txt:`Activo operando dentro de parámetros normales. Continuar con plan preventivo programado. Próxima revisión: ${a.nextP}. No se requiere acción inmediata.` },
+  }[a.risk];
+
+  document.getElementById("assetDetail").innerHTML = `
+    <!-- TOP CARD -->
+    <div class="card" style="margin-bottom:12px">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px">
+        <div>
+          <div style="font-size:20px;font-weight:900;color:#fff">${a.name}</div>
+          <div style="font-size:11px;color:var(--text3);margin-top:2px">${a.loc} · ${a.type}</div>
+        </div>
+        <span class="badge badge-${a.risk}" style="font-size:10px;padding:4px 10px">${riskLabel(a.risk)}</span>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">
+
+        <!-- GAUGE -->
+        <div style="background:rgba(0,0,0,.25);border-radius:12px;padding:14px;text-align:center">
+          <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--text3);margin-bottom:10px">Modelo Predictivo ML</div>
+          <div class="gauge-wrap">
+            <svg viewBox="0 0 80 80" width="100" height="100">
+              <circle cx="40" cy="40" r="38" fill="none" stroke="rgba(255,255,255,.06)" stroke-width="7"/>
+              <circle cx="40" cy="40" r="38" fill="none" stroke="${gc}" stroke-width="7"
+                stroke-dasharray="${C2}" stroke-dashoffset="${offset}"
+                stroke-linecap="round" style="transition:stroke-dashoffset 1s ease"/>
+            </svg>
+            <div class="gauge-center">
+              <div class="gauge-pct" style="color:${gc}">${pct}%</div>
+              <div class="gauge-lbl">prob.<br>fallo</div>
+            </div>
+          </div>
+          <div style="font-size:10px;color:var(--text3);margin-top:8px">Confianza: <b style="color:var(--text2)">87.4%</b></div>
+        </div>
+
+        <!-- RUL -->
+        <div class="rul-panel">
+          <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--text3);margin-bottom:8px">RUL Estimado</div>
+          <div><span class="rul-val">${ru}</span><span class="rul-unit"> h</span></div>
+          <div style="font-size:10px;color:var(--text3);margin-top:2px">Vida útil remanente</div>
+          <div style="margin-top:12px">
+            <div class="rul-row"><span class="rul-key">Último mant.</span><span class="rul-v" style="color:var(--text2)">${a.lastM}</span></div>
+            <div class="rul-row"><span class="rul-key">Próx. intervenc.</span><span class="rul-v" style="color:var(--amber)">${a.nextP}</span></div>
+            <div class="rul-row"><span class="rul-key">Anomaly Score</span><span class="rul-v" style="color:${parseFloat(as)>=5?"var(--red)":"var(--green)"}">${as}/10</span></div>
+            <div class="rul-row"><span class="rul-key">Disponibilidad</span><span class="rul-v" style="color:var(--green)">${av}%</span></div>
+          </div>
+        </div>
+
+        <!-- ECONOMIC -->
+        <div class="rul-panel">
+          <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--text3);margin-bottom:8px">Impacto Económico</div>
+          <div style="font-size:26px;font-weight:900;color:#fca5a5">$${a.cost.toLocaleString()}</div>
+          <div style="font-size:10px;color:var(--text3);margin-top:2px">Costo estimado de fallo</div>
+          <div style="margin-top:12px">
+            <div class="rul-row"><span class="rul-key">MTBF actual</span><span class="rul-v" style="color:var(--text2)">${a.mtbf}h</span></div>
+            <div class="rul-row"><span class="rul-key">MTTR promedio</span><span class="rul-v" style="color:var(--text2)">${a.mttr}h</span></div>
+            <div class="rul-row"><span class="rul-key">Riesgo total</span><span class="rul-v" style="color:var(--amber)">$${riskScore(a)}k</span></div>
+            <div class="rul-row"><span class="rul-key">Tendencia</span><span class="rul-v ${trendClass(a.trend)}">${trendSymbol(a.trend)} ${a.trend}</span></div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- SENSORS CHART -->
+    <div class="card" style="margin-bottom:12px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <div>
+          <div class="section-title">Telemetría de Sensores IoT</div>
+          <div class="section-sub">Lecturas del día — actualización cada 5 min</div>
+        </div>
+        <div class="live-badge"><div class="live-dot"></div>Live</div>
+      </div>
+      <div style="position:relative;height:190px"><canvas id="sensorChart"></canvas></div>
+      <div class="sensor-grid">
+        <div class="sensor-card">
+          <div class="sensor-name">Temperatura</div>
+          <div class="sensor-val" style="color:${a.risk==="critical"?"#ef4444":"#f59e0b"}">${(SENSOR_DATA[a.id]||SENSOR_DATA.default).temp.slice(-1)[0]}</div>
+          <div class="sensor-unit">°C</div>
+          <div class="sensor-status" style="color:${a.risk==="critical"?"#ef4444":"#10b981"}">${a.risk==="critical"?"CRÍTICO":"NORMAL"}</div>
+        </div>
+        <div class="sensor-card">
+          <div class="sensor-name">Vibración</div>
+          <div class="sensor-val" style="color:${a.risk==="critical"?"#ef4444":"#f59e0b"}">${(SENSOR_DATA[a.id]||SENSOR_DATA.default).vib.slice(-1)[0]}</div>
+          <div class="sensor-unit">mm/s</div>
+          <div class="sensor-status" style="color:${a.risk==="critical"?"#ef4444":a.risk==="medium"?"#f59e0b":"#10b981"}">${a.risk==="critical"?"CRÍTICO":a.risk==="medium"?"ATENCIÓN":"NORMAL"}</div>
+        </div>
+        <div class="sensor-card">
+          <div class="sensor-name">Presión</div>
+          <div class="sensor-val" style="color:#3b82f6">${(SENSOR_DATA[a.id]||SENSOR_DATA.default).pres.slice(-1)[0]}</div>
+          <div class="sensor-unit">PSI</div>
+          <div class="sensor-status" style="color:${a.risk==="critical"?"#f59e0b":"#10b981"}">${a.risk==="critical"?"BAJO":"NORMAL"}</div>
+        </div>
+        <div class="sensor-card">
+          <div class="sensor-name">Corriente</div>
+          <div class="sensor-val" style="color:#8b5cf6">${(SENSOR_DATA[a.id]||SENSOR_DATA.default).curr.slice(-1)[0]}</div>
+          <div class="sensor-unit">A</div>
+          <div class="sensor-status" style="color:${a.risk==="critical"?"#ef4444":"#10b981"}">${a.risk==="critical"?"ALTO":"NORMAL"}</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RECOMMENDATION -->
+    <div class="rec-box" style="background:${recCfg.bg};border:1px solid ${recCfg.bdr}">
+      <div class="rec-icon-wrap" style="background:${recCfg.ic}">${recCfg.em}</div>
+      <div>
+        <div class="rec-title" style="color:${recCfg.tc}">Recomendación del Motor Predictivo</div>
+        <div class="rec-desc">${recCfg.txt}</div>
+      </div>
+    </div>
+  `;
+
+  // Sensor chart
+  const sd = SENSOR_DATA[a.id] || SENSOR_DATA.default;
+  createLineChart("sensorChart", sd.labels, [
+    { label:"Temperatura (°C)", data:sd.temp, borderColor:"#ef4444", borderWidth:2, tension:.4, pointRadius:2, fill:false },
+    { label:"Vibración (mm/s)", data:sd.vib,  borderColor:"#f59e0b", borderWidth:2, tension:.4, pointRadius:2, fill:false },
+    { label:"Presión (PSI)",    data:sd.pres, borderColor:"#3b82f6", borderWidth:2, tension:.4, pointRadius:2, fill:false },
+    { label:"Corriente (A)",    data:sd.curr, borderColor:"#8b5cf6", borderWidth:2, tension:.4, pointRadius:2, fill:false },
+  ]);
+}
+
+// ══════════════════════════════════════════════
+// ANALYTICS TAB
+// ══════════════════════════════════════════════
+function renderAnalyticsCharts() {
+  // Cost bar chart
+  destroyChart("costBarChart");
+  const ctx = document.getElementById("costBarChart").getContext("2d");
+  charts["costBarChart"] = new Chart(ctx, {
+    type: "bar",
+    data: {
+      labels: KPI_TREND.labels,
+      datasets: [{
+        label: "Costo ($k)",
+        data: KPI_TREND.costs,
+        backgroundColor: KPI_TREND.costs.map((_, i) => i === KPI_TREND.costs.length-1 ? "#3b82f6" : "rgba(59,130,246,.2)"),
+        borderRadius: 6, borderSkipped: false,
+      }],
+    },
+    options: {
+      ...chartDefaults, responsive:true, maintainAspectRatio:false,
+      scales: {
+        x: chartDefaults.scales.x,
+        y: { ...chartDefaults.scales.y, ticks: { ...chartDefaults.scales.y.ticks, callback: v => `$${v}k` } },
+      },
+    },
+  });
+
+  // MTBF bars
+  const sorted = [...ASSETS].sort((a,b)=>b.mtbf-a.mtbf);
+  document.getElementById("mtbfBars").innerHTML = sorted.map(a => `
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+      <span style="font-size:10px;color:var(--text2);width:130px;flex-shrink:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${a.name}</span>
+      <div style="flex:1;background:rgba(255,255,255,.08);border-radius:3px;height:7px;overflow:hidden">
+        <div style="height:7px;border-radius:3px;background:${healthColor(a.health)};width:${(a.mtbf/4320*100)}%;transition:width .7s ease"></div>
+      </div>
+      <span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--text2);min-width:50px;text-align:right">${a.mtbf}h</span>
+    </div>
+  `).join("");
+
+  // Risk matrix table
+  const sortedRisk = [...ASSETS].sort((a,b)=>b.failP-a.failP);
+  document.getElementById("riskMatrix").innerHTML = `
+    <thead>
+      <tr>
+        <th>Activo</th><th>Tipo</th><th style="text-align:center">Prob. Fallo</th>
+        <th style="text-align:center">Impacto $</th><th style="text-align:center">Riesgo Total</th>
+        <th style="text-align:center">Disponibilidad</th><th style="text-align:center">Acción</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${sortedRisk.map(a => {
+        const rs = riskScore(a); const pct = Math.round(a.failP*100);
+        const pc = pct>=75?"#ef4444":pct>=45?"#f59e0b":"#10b981";
+        const rc = parseInt(rs)>=15?"rgba(239,68,68,.15),#fca5a5,rgba(239,68,68,.3)":parseInt(rs)>=5?"rgba(245,158,11,.15),#fcd34d,rgba(245,158,11,.3)":"rgba(16,185,129,.15),#6ee7b7,rgba(16,185,129,.3)";
+        const [rbg,rtx,rbd] = rc.split(",");
+        const acLbl = a.risk==="critical"?"Intervención Ya":a.risk==="medium"?"Programar":"Monitorear";
+        return `<tr>
+          <td><div class="td-name">${a.name}</div><div class="td-sub">${a.id}</div></td>
+          <td style="color:var(--text3);font-size:11px">${a.type}</td>
+          <td style="text-align:center;font-weight:800;color:${pc}">${pct}%</td>
+          <td style="text-align:center;color:var(--text2)">$${a.cost.toLocaleString()}</td>
+          <td style="text-align:center"><span style="background:${rbg};color:${rtx};border:1px solid ${rbd};padding:2px 8px;border-radius:5px;font-size:10px;font-weight:800">$${rs}k</span></td>
+          <td style="text-align:center;color:var(--green);font-weight:700">${availability(a)}%</td>
+          <td style="text-align:center"><span class="badge badge-${a.risk}" style="font-size:9px">${acLbl}</span></td>
+        </tr>`;
+      }).join("")}
+    </tbody>
+  `;
+}
+
+// ══════════════════════════════════════════════
+// WORK ORDERS TAB
+// ══════════════════════════════════════════════
+function renderWorkOrders() {
+  const pBadge = { critical:"p-critical", high:"p-high", medium:"p-medium", low:"p-low" };
+  const pLbl   = { critical:"Crítica", high:"Alta", medium:"Media", low:"Baja" };
+  const sIcon  = { inprogress:`<span class="status-dot s-progress"></span>En progreso`, pending:`<span class="status-dot s-pending"></span>Pendiente`, scheduled:`<span class="status-dot s-sched"></span>Programado` };
+
+  document.getElementById("workOrderList").innerHTML = WORK_ORDERS.map(wo => {
+    const a = ASSETS.find(x=>x.id===wo.assetId);
+    return `
+      <div class="wo-row">
+        <div class="wo-id">${wo.id}</div>
+        <div class="wo-asset">
+          <div class="wo-name">${a.name}</div>
+          <div class="wo-loc">${a.loc}</div>
+        </div>
+        <span class="badge ${pBadge[wo.priority]}">${pLbl[wo.priority]}</span>
+        <span style="font-size:11px;color:var(--text3);min-width:75px">${wo.type}</span>
+        <span style="font-size:11px;font-weight:600;min-width:100px">${sIcon[wo.status]}</span>
+        <div class="wo-tech">${wo.tech}</div>
+        <div class="wo-eta">ETA: <b style="color:var(--text2)">${wo.eta}</b></div>
+        <div style="min-width:90px">
+          <div class="health-bar-wrap"><div class="health-bar-fill" style="width:${a.health}%;background:${healthColor(a.health)}"></div></div>
+          <div style="font-size:9px;color:var(--text3);margin-top:3px">Salud: ${a.health}%</div>
+        </div>
+      </div>
+    `;
+  }).join("");
+}
+
+// ══════════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════════
+renderDashboard();
+renderAssets();
+renderWorkOrders();
+</script>
+</body>
+</html>
